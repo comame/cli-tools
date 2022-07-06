@@ -1,0 +1,15 @@
+#! /bin/sh
+
+if [ ! -e "deploy.json" ]; then
+    echo "deploy.json not found." 1>&2
+    exit 1
+fi
+
+DEPLOY_NAMESPACE=$(cat deploy.json | jq -r ".namespace")
+DEPLOY_NAME=$(cat deploy.json | jq -r ".name")
+
+DEPLOY_DOCKER_REGISTRY="registry.comame.dev"
+
+eval "docker build -t $DEPLOY_DOCKER_REGISTRY/$DEPLOY_NAME ."
+eval "docker push $DEPLOY_DOCKER_REGISTRY/$DEPLOY_NAME"
+eval "kubectl rollout restart deploy/$DEPLOY_NAME -n $DEPLOY_NAMESPACE"

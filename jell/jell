@@ -1,0 +1,155 @@
+#! /usr/bin/env node
+
+const { exec } = require('node:child_process')
+const path = require('node:path')
+const { readFileSync } = require('node:fs')
+const process = require('node:process')
+const { homedir } = require('node:os')
+
+// ===== Utility functions =====
+
+const removeShebang = (file) => {
+    if (file.startsWith('#!')) {
+        return file.split('\n').slice(1).join('\n')
+    } else {
+        return file
+    }
+}
+
+const resolveHomeTilde = (pathname) => {
+    const paths = pathname.split('/')
+    const index = paths.findIndex(s => s === '~')
+
+    if (index < 0) return pathname
+    paths[index] = homedir()
+    return path.resolve(...paths)
+}
+
+// ===== Exposed functions =====
+
+const scriptGlobalScope = {}
+
+Object.defineProperty(scriptGlobalScope, '__jell_silent', {
+    value: false,
+    writable: true,
+})
+
+async function $(strings, ...nests) {
+    let command = ''
+    for (let i = 0; i < strings.length; i += 1) {
+        command += strings[i]
+        if (typeof nests[i] === 'undefined') continue
+        command += nests[i]
+    }
+
+    return new Promise((resolve, reject) => {
+        exec(command, (err, stdout) => {
+            if (err) {
+                reject(err)
+            } else {
+                let o = stdout
+                if (stdout.endsWith('\n')) {
+                    o = stdout.slice(0, -1)
+                }
+                if (!scriptGlobalScope.__jell_silent) {
+                    console.log(o)
+                }
+                resolve(o)
+            }
+        })
+    })
+}
+
+function cd(path) {
+    if (path === '') {
+        process.chdir(homedir())
+    } else {
+        process.chdir(resolveHomeTilde(path))
+    }
+}
+
+function silent(on = true) {
+    scriptGlobalScope.__jell_silent = on
+}
+
+function args() {
+    return process.argv.slice(3)
+}
+
+async function stdin() {
+    return new Promise((resolve) => {
+        const stdin = process.stdin
+        stdin.resume()
+        let data = ''
+        stdin.on('data', (d) => {
+            data += d.toString()
+        })
+        stdin.on('close', () => {
+            resolve(data)
+        })
+    })
+}
+
+// ===== Environment variables =====
+
+const env = new Proxy({ ...process.env }, {
+    set(obj, prop, value) {
+        process.env[prop] = value
+        obj[prop] = value
+    }
+})
+
+// ===== Eval script =====
+
+const isEvalMode = process.argv[2] === '-e'
+let scriptContent = ''
+
+if (isEvalMode) {
+    scriptContent = process.argv[3]
+    if (!scriptContent) {
+        console.error('jell: no input.')
+        process.exit(1)
+    }
+} else {
+    const scriptPathArg = process.argv[2]
+    if (!scriptPathArg) {
+        console.error('jell: no input file.')
+        process.exit(1)
+    }
+    const scriptPath = path.resolve(process.cwd(), scriptPathArg)
+    scriptContent = removeShebang(readFileSync(scriptPath, { encoding: 'utf-8' }))
+}
+
+const AsyncFunction = Object.getPrototypeOf(async function() {}).constructor
+
+const script = new AsyncFunction(
+    'process',
+    '$',
+    'path',
+    'env',
+    'cd',
+    'args',
+    'silent',
+    'stdin',
+    scriptContent
+)
+const scriptResultPromise = script.bind(scriptGlobalScope)(
+    undefined,
+    $,
+    path,
+    env,
+    cd,
+    isEvalMode ? undefined : args,
+    silent,
+    stdin
+)
+
+process.on('unhandledRejection', (err) => {
+    console.error('Error: '+ err)
+})
+
+scriptResultPromise.then(output => {
+    if (output) {
+        console.log(output)
+    }
+})
