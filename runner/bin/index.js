@@ -47,12 +47,11 @@ async function install() {
     const downloadFile = tmpCwd + '/c-runner-download.zip'
     const extractedDir = 'cli-tools-main'
 
+    await uninstall()
     await _execWithoutStdio(`mkdir -p ${tmpCwd}`)
     await _execWithoutStdio(`curl -sSLf -o ${downloadFile} ${zipUrl}`)
     await _execWithoutStdio(`unzip -o ${downloadFile} 1>/dev/null`, { cwd: tmpCwd })
-    await _execWithoutStdio(`rm -rf /usr/local/lib/cli-tools`)
     await _execWithoutStdio(`mv -f ${tmpCwd}/${extractedDir} /usr/local/lib/cli-tools`)
-    await _execWithoutStdio(`rm -f /usr/local/bin/c`)
     await _execWithoutStdio(`ln -s /usr/local/lib/cli-tools/runner/bin/index.js /usr/local/bin/c`)
 
     await _execWithoutStdio(`chown root:root /usr/local/bin/c`)
