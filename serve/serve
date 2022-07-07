@@ -1,0 +1,312 @@
+#! /usr/bin/env node
+
+// @ts-check
+
+const { cwd, env, exit } = require('node:process')
+const { resolve: resolvePath } = require('node:path')
+const { createServer, IncomingMessage, ServerResponse } = require('node:http')
+const { stat: fsStat, readdir } = require('node:fs/promises')
+const { existsSync: entryExists, createReadStream } = require('node:fs')
+
+/**
+ * @type {{ [key: string]: string }}
+ */
+const mimeTypes = {
+    'js': 'text/javascript',
+    'css': 'text/css',
+    'html': 'text/html',
+    'txt': 'text/plain',
+    'pdf': 'application/pdf',
+    'json': 'application/json',
+    'png': 'image/png',
+    'jpg': 'image/jpeg',
+    'jpeg': 'image/jpeg',
+}
+
+async function main() {
+    const server = createServer()
+
+    server.on('request', async (request, response) => {
+        dropNonLocalhostAccess(request)
+
+        /**
+         * ディレクトリなら末尾に / がつく
+         */
+        const relativePath = decodeURIComponent(new URL(request.url, 'http://127.0.0.1').pathname).slice(1)
+        /**
+         * ディレクトリでも末尾に / がつかない
+         */
+        const fullPath = resolvePath(cwd(), relativePath)
+
+        // Not Found
+        if(!entryExists(fullPath)) {
+            handleNotfoundPage(response)
+            return
+        }
+
+        // URL の正規化
+        if (await normalizeUrlAndRedirect(fullPath, request, response)) {
+            return
+        }
+
+        console.log('  ' + decodeURI(fullPath))
+
+        if (await isDirectory(fullPath)) {
+            handleDirectoryPage(fullPath, relativePath, response)
+        } else {
+            handleFilePage(fullPath, request, response)
+        }
+    })
+
+    const port = await determinePort(parseInt(env.PORT ?? '8080', 10), env.PORT ? 0 : 10)
+
+    server.listen(port, () => {
+        console.log(`Server is listening on http://localhost:${port}\n`)
+    })
+}
+
+/**
+ * @param request {IncomingMessage}
+ */
+function dropNonLocalhostAccess(request) {
+    const acceptAddrs = [
+        '::ffff:127.0.0.1',
+        '::1',
+        '127.0.0.1'
+    ]
+
+    if (!acceptAddrs.includes(request.socket.remoteAddress)) {
+        if (env.DANGEROUSLY_ACCEPT_ANY_REMOTE_ADDR) {
+            console.log(`WARNING: Access from ${request.socket.remoteAddress}`)
+        } else {
+            console.log(`DROP: Access from ${request.socket.remoteAddress}`)
+            request.destroy()
+            return
+        }
+    }
+}
+
+/**
+ * @param fullPath {string}
+ * @returns {Promise<boolean>}
+ */
+async function isDirectory(fullPath) {
+    return (await fsStat(fullPath)).isDirectory()
+}
+
+/**
+ * @param fullPath {string}
+ * @returns {Promise<string[]>}
+ */
+async function lsDirectory(fullPath) {
+    return await readdir(fullPath)
+}
+
+/**
+ * @param fullpath {string}
+ * @param request {IncomingMessage}
+ * @param response {ServerResponse}
+ * @returns {Promise<boolean>}
+ */
+async function normalizeUrlAndRedirect(fullpath, request, response) {
+    const requestUrlPathname = new URL(request.url, 'http://127.0.0.1').pathname
+
+    const dir = await isDirectory(fullpath)
+
+    if (dir && !requestUrlPathname.endsWith('/')) {
+        response.setHeader('Location', requestUrlPathname + '/')
+        response.statusCode = 302
+        response.end()
+        return true
+    }
+    if (!dir && requestUrlPathname.endsWith('/')) {
+        response.setHeader('Location', requestUrlPathname.slice(0, -1))
+        response.statusCode = 302
+        response.end()
+        return true
+    }
+    return false
+}
+
+/**
+ * @param defaultPort {number}
+ * @param tryCount {number}
+ * @returns {Promise<number>}
+ */
+async function determinePort(defaultPort, tryCount) {
+    async function isPortAvailable(port) {
+        return new Promise((resolve) => {
+            const server = createServer()
+            server.on('error', (err) => {
+                console.log(err.message)
+                server.close()
+                resolve(false)
+            })
+            server.listen(port, () => {
+                server.close()
+                resolve(true)
+            })
+        })
+    }
+
+    if (defaultPort <= 1024) {
+        console.error(`Requested privileged port ${defaultPort}.`)
+        exit(1)
+    }
+
+    let port = defaultPort
+    const maxPort = defaultPort + tryCount
+
+    while (port <= maxPort) {
+        if (await isPortAvailable(port)) {
+            break
+        }
+
+        if (port + 1 <= maxPort) {
+            console.log(`Cannot listen on port ${port}, trying ${port + 1}.`)
+            port += 1
+        } else {
+            console.error(`Cannot listen on port ${port}.`)
+            exit(1)
+        }
+    }
+
+    return port
+}
+
+/**
+ * @param response {ServerResponse}
+ */
+function handleNotfoundPage(response) {
+    const html = `
+        <p>Not Found</p>
+        <a href='/'>Top</a>
+    `
+    response.statusCode = 404
+    response.end(html)
+}
+
+/**
+ * @param fullPath {string}
+ * @param request {IncomingMessage}
+ * @param response {ServerResponse}
+ */
+function handleFilePage(fullPath, request, response) {
+    const url = new URL(request.url, 'http://127.0.0.1')
+
+    let contentType = null
+
+    // 拡張子から MIME Type を識別
+    const extension = fullPath.split('.').slice(-1)[0]
+    const mimeType = mimeTypes[extension]
+    if (mimeType) {
+        contentType = mimeType
+    }
+
+    // text クエリパラメータが付いていたとき
+    if (url.searchParams.has('text')) {
+        contentType = 'text/plain'
+    }
+
+    // 文字コード (UTF-8 のみ対応)
+    let charset = 'UTF-8'
+    if (contentType?.startsWith('text/')) {
+        contentType += `; CHARSET=${charset}`
+    }
+
+    if (contentType) {
+        response.setHeader('Content-Type', contentType)
+    }
+
+    createReadStream(fullPath).pipe(response)
+}
+
+/**
+ * @param fullPath {string}
+ * @param relativePath {string}
+ * @param response {ServerResponse}
+ */
+ async function handleDirectoryPage(fullPath, relativePath, response) {
+    const entryNames = await lsDirectory(fullPath)
+    const entries = await Promise.all(entryNames
+        .map((entryName) => isDirectory(resolvePath(fullPath, entryName)))
+        .map(async (isDirectory, index) => ({ isDirectory: await isDirectory, name: entryNames[index] }))
+    )
+
+    entries.unshift({
+        isDirectory: true,
+        name: '..'
+    })
+
+    const html = buildDirectoryPageHtml(fullPath, relativePath, entries)
+
+    response.setHeader('Content-Type', 'text/html')
+    response.end(html)
+ }
+
+/**
+ * @param fullPath {string}
+ * @param relativePath {string}
+ * @param entries {{ isDirectory: boolean, name: string }[]}
+ * @returns {string}
+ */
+function buildDirectoryPageHtml(fullPath, relativePath, entries) {
+    /**
+     * @param entry {typeof entries[0]}
+     * @returns {string}
+     */
+    function buildItem(entry) {
+        const href = '/' + relativePath + entry.name
+        if (entry.isDirectory) {
+            return `<li>d <a href='${href}'>${entry.name}/</a></li>`
+        } else {
+            return `<li>- <a href='${href}'>${entry.name}</a> [<a href='${href}?text'>text</a>]</li>`
+        }
+    }
+
+    return `
+        <head>
+            <meta charset='utf-8'>
+            <title>${ fullPath }</title>
+        </head>
+        <h1>${fullPath}</h1>
+        <ul>
+            <li>d <a href='/'>Top</a></li>
+            ${ entries.map(entry => buildItem(entry)).join('\n') }
+        </ul>
+        <style>
+            h1 { font-size: 1.4em; }
+            ul { list-style: none; }
+            li { padding-bottom: .3em; }
+            a:visited { color: #0000EE; }
+        </style>
+        <script>
+            const entryElements = Array.from(document.querySelectorAll('li > a:nth-child(1)'))
+            let typing = ''
+            let focusing = -1
+            document.addEventListener('keydown', e => {
+                if (e.key === 'Escape') {
+                    typing = ''
+                } else if (e.key === 'ArrowUp') {
+                    focusing = Math.max(0, focusing - 1)
+                    entryElements[focusing]?.focus()
+                } else if (e.key === 'ArrowDown') {
+                    focusing = Math.min(entryElements.length - 1, focusing + 1)
+                    entryElements[focusing]?.focus()
+                } else if (/^[\d0-9a-zA-Z.]$/.test(e.key)) {
+                    typing += e.key
+                    focusing = entryElements.findIndex(el => {
+                        return el.textContent.toLowerCase().startsWith(typing.toLowerCase())
+                    })
+                    if (focusing < 0) {
+                        typing = e.key
+                    }
+                    entryElements[focusing]?.focus()
+                }
+                console.log(typing)
+            })
+        </script>
+    `
+}
+
+main()
