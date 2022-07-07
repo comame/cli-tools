@@ -1,5 +1,3 @@
-mkdir -p /usr/local/lib/cli-tools/runner/bin
-curl -sSLf https://raw.githubusercontent.com/comame/cli-tools/main/runner/bin/index.js -o /usr/local/lib/cli-tools/runner/bin/index.js
-curl -sSLf https://raw.githubusercontent.com/comame/cli-tools/main/commands.json -o /usr/local/lib/cli-tools/commands.json
-chmod +x /usr/local/lib/cli-tools/runner/bin/index.js
-/usr/local/lib/cli-tools/runner/bin/index.js install
+curl -sSLf https://raw.githubusercontent.com/comame/cli-tools/main/runner/bin/index.js -o /tmp/cli-tools-installer.js
+node /tmp/cli-tools-installer.js install
+echo "Run `sudo c install` to complete instalattion."

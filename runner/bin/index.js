@@ -4,7 +4,8 @@ const { resolve } = require('node:path')
 const { spawn } = require('node:child_process')
 const { argv, stdin, stdout, stderr } = require('node:process')
 const { readFileSync } = require('node:fs')
-const commands = require('../../commands.json')
+
+const commands = _readCommands()
 
 const subcommand = argv[2]
 
@@ -66,6 +67,19 @@ async function install() {
 async function uninstall() {
     await _exec(`rm -rf /usr/local/lib/cli-tools`)
     await _exec(`rm /usr/local/bin/c`)
+}
+
+function _readCommands() {
+    try {
+        const commandsFile = readFileSync(
+            resolve(__dirname, '../../commands.json'),
+            { encoding: 'utf8' }
+        )
+        const commands = JSON.parse(commands)
+        return commands
+    } catch {
+        return {}
+    }
 }
 
 async function _exec(command, opt = undefined) {
