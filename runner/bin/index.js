@@ -2,7 +2,8 @@
 
 const { resolve } = require('node:path')
 const { spawn } = require('node:child_process')
-const { argv, exit, stdin, stdout, stderr } = require('node:process')
+const { argv, stdin, stdout, stderr } = require('node:process')
+const { readFileSync } = require('node:fs')
 const commands = require('../../commands.json')
 
 const subcommand = argv[2]
@@ -17,19 +18,26 @@ switch (subcommand) {
     case 'uninstall':
         uninstall()
         break
+    case 'help':
+        help()
+        break
     default:
         const path = commands[subcommand]
         if (!path) {
-            console.error('invalid subcommand')
-            exit(1)
+            help()
+        } else {
+            run(path)
         }
-        run(path)
 }
 
 function run(path) {
     const cmd = [ resolve(__dirname, '../../', path), ...argv.slice(3)]
         .map(it => `"${it}"`).join(' ')
     _exec(cmd)
+}
+
+async function help() {
+    console.log(readFileSync(resolve(__dirname, '../docs/help.txt'), { encoding: 'utf8' }))
 }
 
 async function install() {

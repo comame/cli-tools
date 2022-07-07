@@ -2,14 +2,6 @@
 
 - Docker
 
-### Install `latex` CLI
-
-```
-$ sudo curl -sSf -o /usr/local/bin/latex https://raw.githubusercontent.com/comame/latex/main/bin/latex
-
-$ sudo chmod 755 /usr/local/bin/latex
-```
-
 ## Usage
 
 ### `latex` CLI
