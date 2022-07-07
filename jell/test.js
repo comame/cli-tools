@@ -1,3 +1,3 @@
-#! /usr/bin/env jell
+#! /usr/bin/env -S c jell
 
 $('echo hello')
