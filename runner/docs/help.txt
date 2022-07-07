@@ -3,7 +3,7 @@ c [subcommand]
 Subcommands:
   help          Displays help.
   install       Installes CLI subcommands.
-  updates       Upgrades CLI subcommands.
+  update       Upgrades CLI subcommands.
   uninstall     Uninstalles CLI subcommands.
 
   deploy        Updates k8s deployment.
