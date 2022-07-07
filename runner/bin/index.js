@@ -47,26 +47,26 @@ async function install() {
     const downloadFile = tmpCwd + '/c-runner-download.zip'
     const extractedDir = 'cli-tools-main'
 
-    await _exec(`mkdir -p ${tmpCwd}`)
-    await _exec(`curl -sSLf -o ${downloadFile} ${zipUrl}`)
-    await _exec(`unzip -o ${downloadFile} 1>/dev/null`, { cwd: tmpCwd })
-    await _exec(`rm -rf /usr/local/lib/cli-tools`)
-    await _exec(`mv -f ${tmpCwd}/${extractedDir} /usr/local/lib/cli-tools`)
-    await _exec(`rm -f /usr/local/bin/c`)
-    await _exec(`ln -s /usr/local/lib/cli-tools/runner/bin/index.js /usr/local/bin/c`)
+    await _execWithoutStdio(`mkdir -p ${tmpCwd}`)
+    await _execWithoutStdio(`curl -sSLf -o ${downloadFile} ${zipUrl}`)
+    await _execWithoutStdio(`unzip -o ${downloadFile} 1>/dev/null`, { cwd: tmpCwd })
+    await _execWithoutStdio(`rm -rf /usr/local/lib/cli-tools`)
+    await _execWithoutStdio(`mv -f ${tmpCwd}/${extractedDir} /usr/local/lib/cli-tools`)
+    await _execWithoutStdio(`rm -f /usr/local/bin/c`)
+    await _execWithoutStdio(`ln -s /usr/local/lib/cli-tools/runner/bin/index.js /usr/local/bin/c`)
 
-    await _exec(`chown root:root /usr/local/bin/c`)
-    await _exec(`chown -R root:root /usr/local/lib/cli-tools`)
+    await _execWithoutStdio(`chown root:root /usr/local/bin/c`)
+    await _execWithoutStdio(`chown -R root:root /usr/local/lib/cli-tools`)
 
     for (const command of Object.keys(commands)) {
         const path = '/usr/local/lib/cli-tools/' + commands[command]
-        await _exec(`chmod +x ${path}`)
+        await _execWithoutStdio(`chmod +x ${path}`)
     }
 }
 
 async function uninstall() {
-    await _exec(`rm -rf /usr/local/lib/cli-tools`)
-    await _exec(`rm /usr/local/bin/c`)
+    await _execWithoutStdio(`rm -rf /usr/local/lib/cli-tools`)
+    await _execWithoutStdio(`rm /usr/local/bin/c`)
 }
 
 function _readCommands() {
@@ -75,7 +75,7 @@ function _readCommands() {
             resolve(__dirname, '../../commands.json'),
             { encoding: 'utf8' }
         )
-        const commands = JSON.parse(commands)
+        const commands = JSON.parse(commandsFile)
         return commands
     } catch {
         return {}
@@ -89,6 +89,15 @@ async function _exec(command, opt = undefined) {
     proc.stdout.pipe(stdout)
     proc.stderr.pipe(stderr)
 
+    return new Promise((resolve) => {
+        proc.on('exit', () => {
+            resolve()
+        })
+    })
+}
+
+async function _execWithoutStdio(command, opt = undefined) {
+    const proc = spawn('/bin/bash', [ '-c', command ], opt)
     return new Promise((resolve) => {
         proc.on('exit', () => {
             resolve()
