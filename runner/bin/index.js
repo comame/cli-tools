@@ -11,6 +11,12 @@ switch (subcommand) {
     case 'install':
         install()
         break
+    case 'update':
+        install()
+        break
+    case 'uninstall':
+        uninstall()
+        break
     default:
         const path = commands[subcommand]
         if (!path) {
@@ -40,10 +46,18 @@ async function install() {
     await _exec(`sudo rm -f /usr/local/bin/c`)
     await _exec(`sudo ln -s /usr/local/lib/cli-tools/runner/bin/index.js /usr/local/bin/c`)
 
+    await _exec(`sudo chown root:root /usr/local/bin/c`)
+    await _exec(`sudo chown -R root:root /usr/local/lib/cli-tools`)
+
     for (const command of Object.keys(commands)) {
         const path = '/usr/local/lib/cli-tools/' + commands[command]
         await _exec(`sudo chmod +x ${path}`)
     }
+}
+
+async function uninstall() {
+    await _exec(`sudo rm -rf /usr/local/lib/cli-tools`)
+    await _exec(`sudo rm /usr/local/bin/c`)
 }
 
 async function _exec(command, opt = undefined) {
