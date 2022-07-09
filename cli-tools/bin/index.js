@@ -2,7 +2,7 @@
 
 const { resolve } = require('node:path')
 const { spawn } = require('node:child_process')
-const { argv, stdin, stdout, stderr } = require('node:process')
+const { argv, stdin, stdout, stderr, exit } = require('node:process')
 const { readFileSync } = require('node:fs')
 
 const commands = _readCommands()
@@ -56,7 +56,13 @@ async function install() {
     await uninstall()
 
     await _execWithoutStdio(`mkdir -p ${tmpCwd}`)
-    await _execWithoutStdio(`curl -sSLf -o ${downloadFile} ${zipUrl}`)
+    const fetchExitCode = await _execWithoutStdio(`curl -sSLf -o ${downloadFile} ${zipUrl}`)
+
+    if (fetchExitCode !== 0) {
+        console.error('failed to fetch')
+        exit(1)
+    }
+
     await _execWithoutStdio(`unzip -o ${downloadFile} 1>/dev/null`, { cwd: tmpCwd })
     await _execWithoutStdio(`mv -f ${tmpCwd}/${extractedDir} /usr/local/lib/cli-tools`)
     await _execWithoutStdio(`chown -R root:root /usr/local/lib/cli-tools`)
@@ -79,17 +85,24 @@ async function uninstall() {
 async function alias(command) {
     const path = commands[command]
     if (!path) {
-        return
+        console.error('subcomment not found')
+        exit(1)
     }
 
-    await _execWithoutStdio(`ln -s /usr/local/lib/cli-tools/${path} /usr/local/bin/${command}`)
+    const code = await _execWithoutStdio(`ln -s /usr/local/lib/cli-tools/${path} /usr/local/bin/${command}`)
     await _execWithoutStdio(`chown root:root /usr/local/bin/${command}`)
+
+    if (code !== 0) {
+        console.error('permission denied')
+        exit(1)
+    }
 }
 
 async function unalias(command) {
     if (!commands[command]) {
         return
     }
+
     await _execWithoutStdio(`rm /usr/local/bin/${command}`)
 }
 
@@ -125,8 +138,8 @@ async function _exec(command, opt = undefined) {
 async function _execWithoutStdio(command, opt = undefined) {
     const proc = spawn('/bin/bash', [ '-c', command ], opt)
     return new Promise((resolve) => {
-        proc.on('exit', () => {
-            resolve()
+        proc.on('exit', (code) => {
+            resolve(code)
         })
     })
 }
