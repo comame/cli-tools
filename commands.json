@@ -2,6 +2,6 @@
     "deploy": "deploy/deploy",
     "jell": "jell/jell",
     "latex": "latex/latex",
-    "runner": "runner/bin/index.js",
+    "cli-tools": "cli-tools/bin/index.js",
     "serve": "serve/serve"
 }

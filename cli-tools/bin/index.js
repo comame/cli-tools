@@ -19,6 +19,12 @@ switch (subcommand) {
     case 'uninstall':
         uninstall()
         break
+    case 'alias':
+        alias(argv[3])
+        break
+    case 'rm':
+        unalias(argv[3])
+        break
     case 'help':
         help()
         break
@@ -48,24 +54,43 @@ async function install() {
     const extractedDir = 'cli-tools-main'
 
     await uninstall()
+
     await _execWithoutStdio(`mkdir -p ${tmpCwd}`)
     await _execWithoutStdio(`curl -sSLf -o ${downloadFile} ${zipUrl}`)
     await _execWithoutStdio(`unzip -o ${downloadFile} 1>/dev/null`, { cwd: tmpCwd })
     await _execWithoutStdio(`mv -f ${tmpCwd}/${extractedDir} /usr/local/lib/cli-tools`)
-    await _execWithoutStdio(`ln -s /usr/local/lib/cli-tools/runner/bin/index.js /usr/local/bin/c`)
-
-    await _execWithoutStdio(`chown root:root /usr/local/bin/c`)
     await _execWithoutStdio(`chown -R root:root /usr/local/lib/cli-tools`)
 
     for (const command of Object.keys(commands)) {
         const path = '/usr/local/lib/cli-tools/' + commands[command]
         await _execWithoutStdio(`chmod +x ${path}`)
     }
+
+    await alias('cli-tools')
 }
 
 async function uninstall() {
     await _execWithoutStdio(`rm -rf /usr/local/lib/cli-tools`)
-    await _execWithoutStdio(`rm /usr/local/bin/c`)
+    for (const command of Object.keys(commands)) {
+        await unalias(command)
+    }
+}
+
+async function alias(command) {
+    const path = commands[command]
+    if (!path) {
+        return
+    }
+
+    await _execWithoutStdio(`ln -s /usr/local/lib/cli-tools/${path} /usr/local/bin/${command}`)
+    await _execWithoutStdio(`chown root:root /usr/local/bin/${command}`)
+}
+
+async function unalias(command) {
+    if (!commands[command]) {
+        return
+    }
+    await _execWithoutStdio(`rm /usr/local/bin/${command}`)
 }
 
 function _readCommands() {
