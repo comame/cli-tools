@@ -102,7 +102,9 @@ function _readCommands() {
         const commands = JSON.parse(commandsFile)
         return commands
     } catch {
-        return {}
+        return {
+            'cli-tools': 'cli-tools/bin/index.js' // Required for initial installation
+        }
     }
 }
 
