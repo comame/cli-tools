@@ -11,5 +11,4 @@ Subcommands:
   deploy        Updates k8s deployment.
   jell          JavaScript shell.
   latex         Compiles LaTeX document.
-  runner        Invokes, updates and uninstalls CLI subcommands.
   serve         Starts HTTP server.
