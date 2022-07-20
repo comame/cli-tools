@@ -14,7 +14,7 @@ switch (subcommand) {
         install()
         break
     case 'update':
-        install()
+        setupLibDir()
         break
     case 'uninstall':
         uninstall()
@@ -48,12 +48,25 @@ async function help() {
 }
 
 async function install() {
+    await uninstall()
+    await setupLibDir()
+    await alias('cli-tools')
+}
+
+async function uninstall() {
+    await _execWithoutStdio(`rm -rf ~/.local/lib/cli-tools`)
+    for (const command of Object.keys(commands)) {
+        await unalias(command)
+    }
+}
+
+async function setupLibDir() {
     const zipUrl = 'https://github.com/comame/cli-tools/archive/refs/heads/main.zip'
-    const tmpCwd = '/tmp/cli-tools'
+    const tmpCwd = '~/.cli-tools-tmp'
     const downloadFile = tmpCwd + '/c-runner-download.zip'
     const extractedDir = 'cli-tools-main'
 
-    await uninstall()
+    await _execWithoutStdio(`rm -rf ~/.local/lib/cli-tools`)
 
     await _execWithoutStdio(`mkdir -p ${tmpCwd}`)
     const fetchExitCode = await _execWithoutStdio(`curl -sSLf -o ${downloadFile} ${zipUrl}`)
@@ -63,23 +76,18 @@ async function install() {
         exit(1)
     }
 
-    await _execWithoutStdio(`unzip -o ${downloadFile} 1>/dev/null`, { cwd: tmpCwd })
-    await _execWithoutStdio(`mv -f ${tmpCwd}/${extractedDir} /usr/local/lib/cli-tools`)
-    await _execWithoutStdio(`chown -R root:root /usr/local/lib/cli-tools`)
+    await _execWithoutStdio(`unzip -o ${downloadFile} -d ${tmpCwd} 1>/dev/null`)
+    await _execWithoutStdio(`mkdir -p ~/.local/lib`)
+    await _execWithoutStdio(`mkdir -p ~/.local/bin`)
+    await _execWithoutStdio(`mv -f ${tmpCwd}/${extractedDir} ~/.local/lib/cli-tools`)
+    await _execWithoutStdio(`chown -R root:root ~/.local/lib/cli-tools`)
 
     for (const command of Object.keys(commands)) {
-        const path = '/usr/local/lib/cli-tools/' + commands[command]
+        const path = '~/.local/lib/cli-tools/' + commands[command]
         await _execWithoutStdio(`chmod +x ${path}`)
     }
 
-    await alias('cli-tools')
-}
-
-async function uninstall() {
-    await _execWithoutStdio(`rm -rf /usr/local/lib/cli-tools`)
-    for (const command of Object.keys(commands)) {
-        await unalias(command)
-    }
+    await _execWithoutStdio(`rm -rf ${tmpCwd}`)
 }
 
 async function alias(command) {
@@ -89,8 +97,8 @@ async function alias(command) {
         exit(1)
     }
 
-    const code = await _execWithoutStdio(`ln -s /usr/local/lib/cli-tools/${path} /usr/local/bin/${command}`)
-    await _execWithoutStdio(`chown root:root /usr/local/bin/${command}`)
+    const code = await _execWithoutStdio(`ln -s ~/.local/lib/cli-tools/${path} ~/.local/bin/${command}`)
+    await _execWithoutStdio(`chown root:root ~/.local/bin/${command}`)
 
     if (code !== 0) {
         console.error('permission denied')
@@ -103,7 +111,7 @@ async function unalias(command) {
         return
     }
 
-    await _execWithoutStdio(`rm /usr/local/bin/${command}`)
+    await _execWithoutStdio(`rm ~/.local/bin/${command}`)
 }
 
 function _readCommands() {
@@ -122,7 +130,7 @@ function _readCommands() {
 }
 
 async function _exec(command, opt = undefined) {
-    const proc = spawn('/bin/bash', [ '-c', command ], opt)
+    const proc = spawn('bash', [ '-c', command ], opt)
 
     stdin.pipe(proc.stdin)
     proc.stdout.pipe(stdout)
@@ -136,7 +144,7 @@ async function _exec(command, opt = undefined) {
 }
 
 async function _execWithoutStdio(command, opt = undefined) {
-    const proc = spawn('/bin/bash', [ '-c', command ], opt)
+    const proc = spawn('bash', [ '-c', command ], opt)
     return new Promise((resolve) => {
         proc.on('exit', (code) => {
             resolve(code)
