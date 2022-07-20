@@ -3,5 +3,6 @@
     "jell": "jell/jell",
     "latex": "latex/latex",
     "cli-tools": "cli-tools/bin/index.js",
-    "serve": "serve/serve"
+    "serve": "serve/serve",
+    "update-node-dep": "update-node-dep/index.js"
 }

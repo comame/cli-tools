@@ -8,7 +8,8 @@ Subcommands:
   alias <subcommand>
   rm <subcommand>
 
-  deploy        Updates k8s deployment.
-  jell          JavaScript shell.
-  latex         Compiles LaTeX document.
-  serve         Starts HTTP server.
+  deploy              Updates k8s deployment.
+  jell                JavaScript shell.
+  latex               Compiles LaTeX document.
+  serve               Starts HTTP server.
+  update-node-dep     Update all node dependencies.
