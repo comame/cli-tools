@@ -12,4 +12,22 @@ DEPLOY_DOCKER_REGISTRY="registry.comame.dev"
 
 eval "docker build -t $DEPLOY_DOCKER_REGISTRY/$DEPLOY_NAME ."
 eval "docker push $DEPLOY_DOCKER_REGISTRY/$DEPLOY_NAME"
+
+echo
+echo "PREVIOUS IMAGES"
+echo
+
+RS_NAME=$(kubectl -n $DEPLOY_NAMESPACE describe deployment $DEPLOY_NAME | grep "^NewReplicaSet" | awk '{print $2}')
+POD_HASH_LABEL=$(kubectl -n $DEPLOY_NAMESPACE get rs $RS_NAME -o jsonpath="{.metadata.labels.pod-template-hash}")
+POD_NAMES=$(kubectl -n $DEPLOY_NAMESPACE get pods -l pod-template-hash=$POD_HASH_LABEL --show-labels | tail -n +2 | awk '{print $1}')
+
+for POD in $POD_NAMES; do
+    IDS=$(kubectl -n $DEPLOY_NAMESPACE get pods $POD -o json | jq -r '.status.containerStatuses[].imageID')
+    for ID in $IDS; do
+        echo $ID
+    done
+done
+
+echo
+
 eval "kubectl rollout restart deploy/$DEPLOY_NAME -n $DEPLOY_NAMESPACE"
