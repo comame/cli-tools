@@ -1,6 +1,6 @@
 #! /usr/bin/env node
 
-const { readFile, writeFile ,rm } = require('fs/promises')
+const { readFile } = require('fs/promises')
 const { resolve } = require('path')
 const { spawn } = require('child_process')
 
@@ -10,29 +10,11 @@ async function main() {
     })
     const packageJson = JSON.parse(packageJsonFile)
 
-    const dependencies = { ...packageJson.dependencies }
-    const devDependencies = { ...packageJson.devDependencies }
+    const dependencies = Object.keys(packageJson.dependencies ?? {})
+    const devDependencies = Object.keys(packageJson.devDependencies ?? {})
 
-    await rm(resolve('./node_modules'), {
-        force: true,
-        recursive: true
-    })
-    await rm(resolve('./package.json'))
-    await rm(resolve('./package-lock.json'), {
-        force: true
-    })
-
-    delete packageJson.dependencies
-    delete packageJson.devDependencies
-
-    await writeFile(
-        resolve('./package.json'),
-        JSON.stringify(packageJson, undefined, 4),
-        { encoding: 'utf-8' }
-    )
-
-    await execPromise('npm i ' + Object.keys(dependencies).join(' '))
-    await execPromise('npm i -D ' + Object.keys(devDependencies).join(' '))
+    await execPromise('npm i ' + dependencies.map(n => n + '@latest').join(' '))
+    await execPromise('npm i -D ' + devDependencies.map(n => n + '@latest').join(' '))
 }
 
 async function execPromise(command) {
