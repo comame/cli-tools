@@ -135,7 +135,8 @@ async function generateCompletion() {
     complete -F _complete tools`
 
     try {
-        await writeFile('/usr/share/bash-completion/completions/tools', completionScript)
+        await writeFile('/tmp/cli-tools-completion', completionScript)
+        await _exec('sudo mv /tmp/cli-tools-completion /usr/share/bash-completion/completions/tools')
     } catch (err) {
         console.error(err)
     }
@@ -143,9 +144,7 @@ async function generateCompletion() {
 
 async function removeCompletion() {
     try {
-        await rm('/usr/share/bash-completion/completions/tools', {
-            force: true
-        })
+        await _exec('sudo /usr/share/bash-completion/completions/tools -f')
     } catch (err) {
         console.error(err)
     }
