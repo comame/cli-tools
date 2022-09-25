@@ -1,5 +1,7 @@
 cli-tools [subcommand]
 
+https://github.com/comame/cli-tools
+
 Subcommands:
   help                 Displays help.
   install              Installes CLI subcommands.
