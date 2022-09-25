@@ -22,7 +22,7 @@ switch (subcommand) {
     case 'alias':
         alias(argv[3])
         break
-    case 'rm':
+    case 'unalias':
         unalias(argv[3])
         break
     case 'help':

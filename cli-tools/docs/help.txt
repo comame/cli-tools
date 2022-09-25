@@ -8,7 +8,7 @@ Subcommands:
   update               Upgrades CLI subcommands.
   uninstall            Uninstalles CLI subcommands.
   alias <subcommand>
-  rm <subcommand>
+  unalias <subcommand>
 
   deploy              Updates k8s deployment.
   jell                JavaScript shell.
