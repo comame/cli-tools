@@ -144,7 +144,7 @@ async function generateCompletion() {
 
 async function removeCompletion() {
     try {
-        await _exec('sudo /usr/share/bash-completion/completions/tools -f')
+        await _exec('sudo rm /usr/share/bash-completion/completions/tools -f')
     } catch (err) {
         console.error(err)
     }
