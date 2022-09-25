@@ -4,6 +4,7 @@ const { resolve } = require('node:path')
 const { spawn } = require('node:child_process')
 const { argv, stdin, stdout, stderr, exit } = require('node:process')
 const { readFileSync } = require('node:fs')
+const { writeFile, rm } = require('node:fs/promises')
 
 const commands = _readCommands()
 
@@ -24,6 +25,12 @@ switch (subcommand) {
         break
     case 'unalias':
         unalias(argv[3])
+        break
+    case 'completion':
+        generateCompletion()
+        break
+    case 'rm-completion':
+        removeCompletion()
         break
     case 'help':
         help()
@@ -112,6 +119,36 @@ async function unalias(command) {
     }
 
     await _execWithoutStdio(`rm ~/.local/bin/${command}`)
+}
+
+async function generateCompletion() {
+    const subCommands = Object.keys(commands)
+
+    const completionScript = `function _complete() {
+        local cur prev cword
+        _get_comp_words_by_ref -n : cur prev cword
+
+        options="${subCommands.join(' ')} install update uninstall alias unalias completion rm-completion help"
+        COMPREPLY=($(compgen -W "$options" -- "$cur"))
+    }
+
+    complete -F _complete tools`
+
+    try {
+        await writeFile('/usr/share/bash-completion/completions/tools', completionScript)
+    } catch (err) {
+        console.error(err)
+    }
+}
+
+async function removeCompletion() {
+    try {
+        await rm('/usr/share/bash-completion/completions/tools', {
+            force: true
+        })
+    } catch (err) {
+        console.error(err)
+    }
 }
 
 function _readCommands() {

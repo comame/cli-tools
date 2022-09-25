@@ -7,8 +7,10 @@ Subcommands:
   install              Installes CLI subcommands.
   update               Upgrades CLI subcommands.
   uninstall            Uninstalles CLI subcommands.
-  alias <subcommand>
-  unalias <subcommand>
+  alias <subcommand>   Sets alias of subcommand.
+  unalias <subcommand> Removes alias.
+  completion           Bash completion.
+  rm-completion        Removes Bash completion.
 
   deploy              Updates k8s deployment.
   jell                JavaScript shell.
