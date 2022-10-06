@@ -1,4 +1,4 @@
-#! /bin/sh
+#! /bin/bash
 
 if [ ! -e "deploy.json" ]; then
     echo "deploy.json not found." 1>&2
@@ -7,6 +7,13 @@ fi
 
 DEPLOY_NAMESPACE=$(cat deploy.json | jq -r ".namespace")
 DEPLOY_NAME=$(cat deploy.json | jq -r ".name")
+
+if [ "$1" = "generate" ]; then
+    FILE=$(sed "s/\$namespace/$DEPLOY_NAMESPACE/g" $(dirname ${0})/template.yml);
+    FILE=$(echo "$FILE" | sed "s/\$name/$DEPLOY_NAME/g" <());
+    echo "$FILE"
+    exit
+fi
 
 DEPLOY_DOCKER_REGISTRY="registry.comame.dev"
 

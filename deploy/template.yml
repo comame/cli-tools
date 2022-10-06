@@ -1,0 +1,85 @@
+# Deployment
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: $name
+  namespace: $namespace
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: $name
+  template:
+    metadata:
+      labels:
+        app: $name
+    spec:
+      containers:
+      - image: registry.comame.dev/$name:latest
+        name: $name
+        ports:
+        - containerPort: 80
+          protocol: TCP
+      imagePullSecrets:
+        - name: regcred
+
+---
+
+# Service
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: $name
+  namespace: $namespace
+spec:
+  ports:
+    - port: 80
+      targetPort: 80
+      protocol: TCP
+  selector:
+    app: comame-xyz
+
+---
+
+## Ingress
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ingress-$namespace
+  namespace: web
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    cert-manager.io/issuer: letsencrypt
+spec:
+  ingressClassName: internal # or external
+  tls:
+    - hosts:
+        - dummy.comame.dev # host
+      secretName: dummy.comame.dev # host
+  rules:
+    - host: dummy.comame.dev # host
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: $name
+                port:
+                  number: 80
+
+---
+
+# Service for Ingress
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: $name
+  namespace: web
+spec:
+  type: ExternalName
+  externalName: $name.$namespace.svc.cluster.local
