@@ -8,6 +8,16 @@ fi
 DEPLOY_NAMESPACE=$(cat deploy.json | jq -r ".namespace")
 DEPLOY_NAME=$(cat deploy.json | jq -r ".name")
 
+if [ "$DEPLOY_NAMESPACE" = "null" ]; then
+    echo "Field \"namespace\" is required." 1>&2
+    exit 1
+fi
+
+if [ "$DEPLOY_NAME" = "null" ]; then
+    echo "Field \"name\" is required." 1>&2
+    exit 1
+fi
+
 if [ "$1" = "generate" ]; then
     FILE=$(sed "s/\$namespace/$DEPLOY_NAMESPACE/g" $(dirname ${0})/template.yml);
     FILE=$(echo "$FILE" | sed "s/\$name/$DEPLOY_NAME/g" <());
