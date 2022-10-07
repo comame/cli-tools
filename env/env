@@ -10,4 +10,4 @@ if [ ! -e "$1" ]; then
     exit 1
 fi
 
-export $(cat $1 | grep -v "^#")
+echo $(cat $1 | grep -v "^#")
