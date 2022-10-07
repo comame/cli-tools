@@ -17,3 +17,4 @@ Subcommands:
   latex               Compiles LaTeX document.
   serve               Starts HTTP server.
   update-node-dep     Update all node dependencies.
+  env                 Exports envfile.
