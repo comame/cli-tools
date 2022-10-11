@@ -11,4 +11,4 @@ if [ ! -e "$1" ]; then
     exit 1
 fi
 
-echo $(cat $1 | grep -v "^#")
+echo $(cat $FILENAME | grep -v "^#")
