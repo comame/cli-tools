@@ -6,7 +6,7 @@ if [ "$FILENAME" = "" ]; then
     FILENAME=".env"
 fi
 
-if [ ! -e "$1" ]; then
+if [ ! -e "$FILENAME" ]; then
     echo "!" 1>&2
     exit 1
 fi
