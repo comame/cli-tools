@@ -1,8 +1,9 @@
 #! /bin/bash
 
-if [ "$1" = "" ]; then
-    echo "?" 1>&2
-    exit 1
+FILENAME=$1
+
+if [ "$FILENAME" = "" ]; then
+    FILENAME=".env"
 fi
 
 if [ ! -e "$1" ]; then
