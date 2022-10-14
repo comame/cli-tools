@@ -29,6 +29,14 @@ DEPLOY_DOCKER_REGISTRY="registry.comame.dev"
 
 DATE=$(date +%Y%m%d-%H%M%S)
 
+PREBUILD=$(cat deploy.json | jq -r ".prebuild")
+echo $PREBUILD
+
+if [ ! "$PREBUILD" = "null" ]; then
+    echo "$PREBUILD"
+    eval "$PREBUILD"
+fi
+
 eval "docker build -t $DEPLOY_DOCKER_REGISTRY/$DEPLOY_NAME:$DATE ."
 eval "docker tag $DEPLOY_DOCKER_REGISTRY/$DEPLOY_NAME:$DATE $DEPLOY_DOCKER_REGISTRY/$DEPLOY_NAME:latest"
 eval "docker push $DEPLOY_DOCKER_REGISTRY/$DEPLOY_NAME:$DATE"
