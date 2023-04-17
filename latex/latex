@@ -110,6 +110,7 @@ fi
 
 if "${OPT_SHOW_STYLE}"; then
     curl -sSf https://raw.githubusercontent.com/comame/latex/main/mystyle.sty | less
+    docker run --rm --entrypoint '' $OPT_VAR_OVERRIDE_IMAGE cat /mystyle.sty | less
     exit 0
 fi
 
