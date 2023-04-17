@@ -57,7 +57,7 @@ async function help() {
 async function install() {
     await uninstall()
     await setupLibDir()
-    await alias('cli-tools')
+    await alias('tools')
 }
 
 async function uninstall() {
@@ -160,7 +160,7 @@ function _readCommands() {
         return commands
     } catch {
         return {
-            'cli-tools': 'cli-tools/bin/index.js' // Required for initial installation
+            'tools': 'cli-tools/bin/index.js' // Required for initial installation
         }
     }
 }

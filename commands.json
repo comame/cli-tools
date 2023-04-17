@@ -2,7 +2,7 @@
     "deploy": "deploy/deploy",
     "jell": "jell/jell",
     "latex": "latex/latex",
-    "cli-tools": "cli-tools/bin/index.js",
+    "tools": "cli-tools/bin/index.js",
     "serve": "serve/serve",
     "update-node-dep": "update-node-dep/index.js",
     "env": "env/env"
